@@ -321,7 +321,7 @@ def light_level(name: str, loc: tuple[float, float, float], time_s: float) -> fl
     for cell in work_surface_cells():
         cx, cy, _cz = cell["center"]
         cell_scores = cell_activity_scores(cell, time_s)
-        radius_x, radius_y = (1.35, 1.75) if weights.get("self_study_summary", 0.0) > 0.5 else (2.10, 2.55)
+        radius_x, radius_y = (1.65, 2.15) if weights.get("self_study_summary", 0.0) > 0.5 else (2.10, 2.55)
         influence = math.exp(-((x - cx) / radius_x) ** 2 - ((y - cy) / radius_y) ** 2)
         if cell["label"] in ("blackboard", "projection_screen"):
             influence *= 0.65
@@ -331,7 +331,7 @@ def light_level(name: str, loc: tuple[float, float, float], time_s: float) -> fl
         presenter_task = max(presenter_task, influence * 0.56 * cell_scores["blackboard-writing"])
         projection_note_task = max(projection_note_task, influence * (0.25 + 0.35 * smoothstep(5.0, 13.2, cy)) * cell_scores["projection"])
 
-    seated_task = min(1.12, seated_task * 1.18)
+    seated_task = min(1.12, seated_task * (1.56 if weights.get("self_study_summary", 0.0) > 0.5 else 1.18))
     walking_task = min(1.00, walking_task * 1.16)
     standing_task = min(0.78, standing_task * 1.12)
     presenter_task = min(0.50, presenter_task * 1.10)
@@ -556,14 +556,18 @@ def animate_people(people: list[list[bpy.types.Object]]):
     teacher_idx = STUDENT_COUNT
     for idx, parts in enumerate(people):
         if idx == teacher_idx:
-            teacher_hidden = (base.P["room_width"] / 2, 1.2, 0.16)
+            teacher_hidden = hidden_staging(teacher_idx)
             teacher_front = (base.P["room_width"] / 2 - 0.9, 1.35, 0.16)
             teacher_walkway = front_open_walkway_point(teacher_front[0])
             teacher_door_aisle = door_side_aisle_point(2.18)
             teacher_door = front_door_point(teacher_idx)
             set_person_path(parts, [
                 (0.0, teacher_hidden, False, False),
-                (2.5, teacher_front, True, False),
+                (2.20, teacher_hidden, False, False),
+                (2.32, teacher_door, True, False),
+                (2.56, teacher_door_aisle, True, False),
+                (2.84, teacher_walkway, True, False),
+                (3.14, teacher_front, True, False),
                 (16.55, teacher_front, True, False),
                 (16.85, teacher_walkway, True, False),
                 (17.10, teacher_door_aisle, True, False),
@@ -739,7 +743,12 @@ def cell_activity_scores(cell: dict, time_s: float) -> dict[str, float]:
     for activity in scores:
         scores[activity] = min(1.0, scores[activity])
     active_max = max(scores[activity] for activity in ACTIVITY_CATEGORIES if activity != "empty")
-    scores["empty"] = max(0.0, 1.0 - smoothstep(0.02, 0.18, active_max))
+    if active_max < 0.45:
+        for activity in ACTIVITY_CATEGORIES:
+            scores[activity] = 0.0
+        scores["empty"] = 1.0
+    else:
+        scores["empty"] = max(0.0, 1.0 - smoothstep(0.35, 0.55, active_max))
     return scores
 
 
