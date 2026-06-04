@@ -1,0 +1,4 @@
+strategy,relative_energy,saving_vs_full_on
+full_on,1.0,0.0
+mode_uniform_dimming,0.5279,0.4721
+smart_per_lamp_dimming,0.586,0.414
