@@ -1,0 +1,41 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and local env files
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Blender backup and autosave files
+*.blend1
+*.blend2
+*.blend@
+*.blend~
+*.autosave.blend
+
+# Temporary render outputs
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Logs
+*.log

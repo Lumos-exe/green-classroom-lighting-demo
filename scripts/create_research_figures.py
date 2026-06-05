@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "outputs" / "data"
 FIG_DIR = ROOT / "outputs" / "figures"
 VIDEO_DIR = ROOT / "outputs" / "videos"
+DASHBOARD_VIDEO = VIDEO_DIR / "companion" / "lighting_dashboard_video.mp4"
 
 LIGHT_NAMES = [f"ceiling_light_r{r:02d}_c{c:02d}" for r in range(1, 6) for c in range(1, 5)]
 LINEAR_NAMES = ["front_linear_light_left", "front_linear_light_right"]
@@ -261,8 +262,20 @@ def draw_centered_text(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]
     draw.text((x, y), text, fill=fill, font=font)
 
 
+def save_gif(path: Path, frames: list[Image.Image], duration_ms: int):
+    quantized = [frame.convert("P", palette=Image.Palette.ADAPTIVE, colors=128) for frame in frames]
+    quantized[0].save(
+        path,
+        save_all=True,
+        append_images=quantized[1:],
+        duration=duration_ms,
+        loop=0,
+        optimize=True,
+    )
+
+
 def make_matrix_gif(rows):
-    frames = []
+    frames: list[Image.Image] = []
     for time_s in np.linspace(0, 20, 41):
         row = nearest_row(rows, float(time_s))
         mat = light_matrix(row)
@@ -299,8 +312,8 @@ def make_matrix_gif(rows):
                 draw.rounded_rectangle(box, radius=6, fill=light_color(val), outline="#111827", width=1)
                 draw.text((x + 10, y + 8), f"R{r+1}C{[4,3,2,1][c]}", fill="#111827", font=FONT_12)
                 draw.text((x + 70, y + 25), f"{int(round(val / 1.18 * 100)):02d}%", fill="#111827", font=FONT_18)
-        frames.append(np.array(image))
-    imageio.mimsave(VIDEO_DIR / "light_control_matrix.gif", frames, duration=0.12)
+        frames.append(image)
+    save_gif(VIDEO_DIR / "light_control_matrix.gif", frames, 120)
 
 
 def room_mapper(box: tuple[int, int, int, int]):
@@ -344,7 +357,7 @@ def make_activity_heatmap_gif():
     occupancy_by_time = rows_by_time(read_csv(DATA_DIR / "occupancy_timeseries.csv"))
     activity_times = sorted(activity_by_time)
     occupancy_times = sorted(occupancy_by_time)
-    frames = []
+    frames: list[Image.Image] = []
     for time_s in np.linspace(0, 20, 41):
         mode = mode_at(timeline, float(time_s))
         activity_rows = rows_at_time(activity_by_time, activity_times, float(time_s))
@@ -410,8 +423,34 @@ def make_activity_heatmap_gif():
         walking = sum(1 for row in occupancy_rows if row["activity"] == "walking")
         draw.text((548, 436), f"walking {walking}", fill="#cbd5e1", font=FONT_14)
         draw.text((548, 492), "white rings: occupants", fill="#94a3b8", font=FONT_13)
-        frames.append(np.array(image))
-    imageio.mimsave(VIDEO_DIR / "activity_heatmap.gif", frames, duration=0.12)
+        frames.append(image)
+    save_gif(VIDEO_DIR / "activity_heatmap.gif", frames, 120)
+
+
+def make_dashboard_preview_gif():
+    if not DASHBOARD_VIDEO.exists():
+        print(f"skip dashboard preview GIF; missing {DASHBOARD_VIDEO}")
+        return
+    reader = imageio.get_reader(DASHBOARD_VIDEO)
+    meta = reader.get_meta_data()
+    fps = float(meta.get("fps") or 24.0)
+    duration = float(meta.get("duration") or 20.0)
+    start_s = 0.0
+    end_s = duration
+    sample_fps = 2.0
+    target_w = 760
+    frames: list[Image.Image] = []
+    sample_times = list(np.arange(start_s, end_s, 1.0 / sample_fps))
+    if not sample_times or sample_times[-1] < end_s - 0.25:
+        sample_times.append(max(start_s, end_s - 0.05))
+    for time_s in sample_times:
+        frame_idx = int(round(time_s * fps))
+        frame_idx = max(0, min(frame_idx, int(round(duration * fps)) - 1))
+        frame = Image.fromarray(reader.get_data(frame_idx)).convert("RGB")
+        target_h = int(round(target_w * frame.height / frame.width))
+        frames.append(frame.resize((target_w, target_h), Image.Resampling.LANCZOS))
+    reader.close()
+    save_gif(VIDEO_DIR / "dashboard_preview.gif", frames, int(round(1000 / sample_fps)))
 
 
 def main():
@@ -425,7 +464,8 @@ def main():
     plot_quality_metrics(rows)
     make_matrix_gif(rows)
     make_activity_heatmap_gif()
-    print("created figures, light_control_matrix.gif, and activity_heatmap.gif")
+    make_dashboard_preview_gif()
+    print("created figures, dashboard_preview.gif, light_control_matrix.gif, and activity_heatmap.gif")
 
 
 if __name__ == "__main__":
