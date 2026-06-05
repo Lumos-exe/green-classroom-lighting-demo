@@ -14,7 +14,6 @@ import create_realistic_classroom_preview as base
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_VIDEO = ROOT / "outputs" / "videos" / "smart_lighting_demo.mp4"
-OUT_PREVIEW_VIDEO = ROOT / "outputs" / "videos" / "smart_lighting_demo_preview.mp4"
 OUT_KEYFRAMES = ROOT / "outputs" / "videos" / "keyframes"
 OUT_BLEND = ROOT / "outputs" / "blender" / "smart_lighting_demo.blend"
 OUT_DATA = ROOT / "outputs" / "data"
@@ -36,7 +35,7 @@ TIMELINE = [
     ("break_mode", 8.0, 10.8),
     ("projection_mode", 10.8, 14.0),
     ("self_study", 14.0, 17.2),
-    ("self_study_summary", 17.2, 20.0),
+    ("final_self_study", 17.2, 20.0),
 ]
 
 KEYFRAMES = [
@@ -44,7 +43,7 @@ KEYFRAMES = [
     ("keyframe_02_class_mode.png", "class_mode", 6.8),
     ("keyframe_03_break_mode.png", "break_mode", 9.2),
     ("keyframe_04_projection_mode.png", "projection_mode", 12.2),
-    ("keyframe_05_self_study_mode.png", "self_study_summary", 19.0),
+    ("keyframe_05_self_study_mode.png", "self_study", 19.0),
 ]
 
 PERSON_EVENTS: dict[int, list[tuple[float, tuple[float, float, float], bool, bool]]] = {}
@@ -59,7 +58,6 @@ def parse_args() -> argparse.Namespace:
         argv = []
     parser = argparse.ArgumentParser()
     parser.add_argument("--keyframes-only", action="store_true")
-    parser.add_argument("--preview-video", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -72,6 +70,10 @@ def phase_at(time_s: float) -> str:
         if start <= time_s < end:
             return name
     return TIMELINE[-1][0]
+
+
+def public_mode(mode: str) -> str:
+    return "self_study" if mode == "final_self_study" else mode
 
 
 def smoothstep(edge0: float, edge1: float, x: float) -> float:
@@ -264,7 +266,7 @@ def activity_for_person(idx: int, sitting: bool, speed: float, time_s: float) ->
         return "walking" if speed > 0.12 else "blackboard-writing"
     if speed > 0.12 and not sitting:
         return "walking"
-    if sitting and mode in ("self_study", "self_study_summary") and idx in SELF_STUDY_STUDENTS:
+    if sitting and mode in ("self_study", "final_self_study") and idx in SELF_STUDY_STUDENTS:
         return "writing"
     if sitting and mode == "self_study":
         return "writing"
@@ -321,7 +323,7 @@ def light_level(name: str, loc: tuple[float, float, float], time_s: float) -> fl
     for cell in work_surface_cells():
         cx, cy, _cz = cell["center"]
         cell_scores = cell_activity_scores(cell, time_s)
-        radius_x, radius_y = (1.65, 2.15) if weights.get("self_study_summary", 0.0) > 0.5 else (2.10, 2.55)
+        radius_x, radius_y = (1.65, 2.15) if weights.get("final_self_study", 0.0) > 0.5 else (2.10, 2.55)
         influence = math.exp(-((x - cx) / radius_x) ** 2 - ((y - cy) / radius_y) ** 2)
         if cell["label"] in ("blackboard", "projection_screen"):
             influence *= 0.65
@@ -331,7 +333,7 @@ def light_level(name: str, loc: tuple[float, float, float], time_s: float) -> fl
         presenter_task = max(presenter_task, influence * 0.56 * cell_scores["blackboard-writing"])
         projection_note_task = max(projection_note_task, influence * (0.25 + 0.35 * smoothstep(5.0, 13.2, cy)) * cell_scores["projection"])
 
-    seated_task = min(1.12, seated_task * (1.56 if weights.get("self_study_summary", 0.0) > 0.5 else 1.18))
+    seated_task = min(1.12, seated_task * (1.56 if weights.get("final_self_study", 0.0) > 0.5 else 1.18))
     walking_task = min(1.00, walking_task * 1.16)
     standing_task = min(0.78, standing_task * 1.12)
     presenter_task = min(0.50, presenter_task * 1.10)
@@ -523,7 +525,7 @@ def person_target(idx: int, mode: str) -> tuple[tuple[float, float, float], bool
     if idx == STUDENT_COUNT:
         if mode == "empty_safety":
             return ((base.P["room_width"] / 2, 1.2, 0.16), False, False)
-        if mode in ("self_study", "self_study_summary"):
+        if mode in ("self_study", "final_self_study"):
             return ((base.P["room_width"] / 2, 1.2, 0.16), False, False)
         return ((base.P["room_width"] / 2 - 0.9, 1.35, 0.16), True, False)
     if mode == "empty_safety":
@@ -657,24 +659,14 @@ def animate_people(people: list[list[bpy.types.Object]]):
         set_person_path(parts, events)
 
 
-def configure_render(keyframes_only: bool, preview_video: bool):
+def configure_render(keyframes_only: bool):
     scene = bpy.context.scene
     scene.frame_start = 1
     scene.frame_end = FRAME_END
     scene.frame_set(1)
     scene.render.fps = FPS
     scene.frame_step = 1
-    if preview_video:
-        scene.render.engine = "CYCLES"
-        scene.cycles.samples = 8
-        scene.cycles.use_denoising = True
-        scene.cycles.denoiser = "OPENIMAGEDENOISE"
-        scene.cycles.max_bounces = 2
-        scene.cycles.diffuse_bounces = 1
-        scene.cycles.glossy_bounces = 1
-        scene.render.fps = 8
-        scene.frame_step = 3
-    elif keyframes_only:
+    if keyframes_only:
         scene.render.engine = "CYCLES"
         scene.cycles.samples = 72
         scene.cycles.use_denoising = True
@@ -695,8 +687,8 @@ def configure_render(keyframes_only: bool, preview_video: bool):
     scene.view_settings.look = "Medium High Contrast"
     scene.view_settings.exposure = -0.15
     scene.view_settings.gamma = 1.0
-    scene.render.resolution_x = 480 if preview_video else 1280
-    scene.render.resolution_y = 270 if preview_video else 720
+    scene.render.resolution_x = 1280
+    scene.render.resolution_y = 720
     scene.render.image_settings.file_format = "PNG"
 
 
@@ -769,8 +761,7 @@ def export_data(light_map):
             ("class_mode", 2.2, 8.0, "Students enter from the front door, settle, then remain in a stable class segment."),
             ("break_mode", 8.0, 10.8, "Aisles and door circulation get priority lighting while students walk and return."),
             ("projection_mode", 10.8, 14.0, "Front board area dims for projection while students remain seated."),
-            ("self_study", 14.0, 17.2, "Dismissal finishes in about three seconds while sparse occupants remain for self-study."),
-            ("self_study_summary", 17.2, 20.0, "Stable final self-study lighting state."),
+            ("self_study", 14.0, 20.0, "Dismissal finishes in about three seconds, then sparse occupants remain for stable self-study lighting."),
         ])
 
     samples = [round(i * 0.25, 2) for i in range(int(DURATION_S / 0.25) + 1)]
@@ -778,7 +769,7 @@ def export_data(light_map):
         writer = csv.writer(f)
         writer.writerow(["time_s", "mode", *ALL_LIGHT_NAMES])
         for time_s in samples:
-            row = [time_s, phase_at(time_s)]
+            row = [time_s, public_mode(phase_at(time_s))]
             for name in ALL_LIGHT_NAMES:
                 _lamp, _cover, _base_energy, loc = light_map[name]
                 row.append(round(light_level(name, loc, time_s), 4))
@@ -788,7 +779,7 @@ def export_data(light_map):
         writer = csv.writer(f)
         writer.writerow(["time_s", "mode", "person_id", "x_m", "y_m", "z_m", "state", "activity"])
         for time_s in samples:
-            mode = phase_at(time_s)
+            mode = public_mode(phase_at(time_s))
             for idx in sorted(PERSON_EVENTS):
                 loc, visible, sitting, speed = interpolate_activity_path(PERSON_EVENTS[idx], time_s)
                 if visible:
@@ -807,7 +798,7 @@ def export_data(light_map):
         writer = csv.writer(f)
         writer.writerow(["time_s", "mode", "cell_id", "x_m", "y_m", "dominant_activity", *ACTIVITY_CATEGORIES])
         for time_s in samples:
-            mode = phase_at(time_s)
+            mode = public_mode(phase_at(time_s))
             for cell in work_surface_cells():
                 x, y, _z = cell["center"]
                 scores = cell_activity_scores(cell, time_s)
@@ -824,29 +815,18 @@ def export_data(light_map):
 
     full_on = len(LIGHT_NAMES) * 1.0 * len(samples) + len(LINEAR_NAMES) * 1.0 * len(samples)
     smart = 0.0
-    uniform = 0.0
     for time_s in samples:
-        mode = phase_at(time_s)
-        mode_uniform = {
-            "empty_safety": 0.14,
-            "class_mode": 0.86,
-            "break_mode": 0.58,
-            "projection_mode": 0.48,
-            "self_study": 0.36,
-            "self_study_summary": 0.36,
-        }[mode]
-        uniform += mode_uniform * len(ALL_LIGHT_NAMES)
         for name in ALL_LIGHT_NAMES:
             _lamp, _cover, _base_energy, loc = light_map[name]
             smart += light_level(name, loc, time_s)
     with (OUT_DATA / "energy_summary.csv").open("w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["strategy", "relative_energy", "saving_vs_full_on"])
-        for strategy, value in (("full_on", full_on), ("mode_uniform_dimming", uniform), ("smart_per_lamp_dimming", smart)):
+        for strategy, value in (("full_on", full_on), ("smart_per_lamp_dimming", smart)):
             writer.writerow([strategy, round(value / full_on, 4), round(1.0 - value / full_on, 4)])
 
 
-def build_scene(keyframes_only: bool, preview_video: bool):
+def build_scene(keyframes_only: bool):
     base.clear()
     OUT_KEYFRAMES.mkdir(parents=True, exist_ok=True)
     OUT_VIDEO.parent.mkdir(parents=True, exist_ok=True)
@@ -859,7 +839,7 @@ def build_scene(keyframes_only: bool, preview_video: bool):
     base.build_tiers_and_benches()
     light_mats = base.build_ceiling_equipment()
     base.setup_camera_and_render()
-    configure_render(keyframes_only, preview_video)
+    configure_render(keyframes_only)
     light_map = index_lights(light_mats)
     people = add_people()
     animate_people(people)
@@ -880,7 +860,7 @@ def render_keyframes(light_map):
         bpy.ops.render.render(write_still=True)
 
 
-def render_video(preview_video: bool):
+def render_video():
     scene = bpy.context.scene
     scene.camera = bpy.data.objects["rear_to_front_camera"]
     scene.render.image_settings.file_format = "FFMPEG"
@@ -888,18 +868,17 @@ def render_video(preview_video: bool):
     scene.render.ffmpeg.codec = "H264"
     scene.render.ffmpeg.constant_rate_factor = "MEDIUM"
     scene.render.ffmpeg.ffmpeg_preset = "GOOD"
-    scene.render.filepath = str(OUT_PREVIEW_VIDEO if preview_video else OUT_VIDEO)
+    scene.render.filepath = str(OUT_VIDEO)
     bpy.ops.render.render(animation=True)
 
 
 def main():
     args = parse_args()
-    light_map = build_scene(args.keyframes_only, args.preview_video)
+    light_map = build_scene(args.keyframes_only)
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT_BLEND))
-    if not args.preview_video:
-        render_keyframes(light_map)
+    render_keyframes(light_map)
     if not args.keyframes_only:
-        render_video(args.preview_video)
+        render_video()
 
 
 if __name__ == "__main__":

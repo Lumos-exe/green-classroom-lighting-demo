@@ -3,5 +3,4 @@ empty_safety,0.0,2.2,"Low readable safety lighting, no occupants."
 class_mode,2.2,8.0,"Students enter from the front door, settle, then remain in a stable class segment."
 break_mode,8.0,10.8,Aisles and door circulation get priority lighting while students walk and return.
 projection_mode,10.8,14.0,Front board area dims for projection while students remain seated.
-self_study,14.0,17.2,Dismissal finishes in about three seconds while sparse occupants remain for self-study.
-self_study_summary,17.2,20.0,Stable final self-study lighting state.
+self_study,14.0,20.0,"Dismissal finishes in about three seconds, then sparse occupants remain for stable self-study lighting."
