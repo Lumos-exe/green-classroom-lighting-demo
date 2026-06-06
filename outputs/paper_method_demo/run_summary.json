@@ -1,0 +1,169 @@
+{
+  "scenarios": [
+    "class_writing",
+    "break_discussion",
+    "projection",
+    "board_writing",
+    "self_study"
+  ],
+  "cell_count": 93,
+  "lamp_count": 22,
+  "solvers": [
+    "L-BFGS-B"
+  ],
+  "all_solver_success": true,
+  "mean_control_by_scenario": {
+    "class_writing": 0.19677032718104542,
+    "break_discussion": 0.051221366168406134,
+    "projection": 0.1421900576051425,
+    "board_writing": 0.11829108042820206,
+    "self_study": 0.06802264550031399
+  },
+  "quality_by_scenario": {
+    "class_writing": {
+      "mean_under_light": 0.02967305141594951,
+      "max_under_light": 0.14378814493138148,
+      "mean_over_light": 0.0,
+      "max_over_light": 0.0,
+      "mean_energy": 0.19677032718104542,
+      "relative_energy": 0.19677032718104542,
+      "target_satisfaction_rate": 0.7419354838709677,
+      "normalized_target_satisfaction": 0.7419354838709677,
+      "mock_light_estimation_error": 0.05383603246000475
+    },
+    "break_discussion": {
+      "mean_under_light": 0.01860185787504118,
+      "max_under_light": 0.12616282633944909,
+      "mean_over_light": 0.0,
+      "max_over_light": 0.0,
+      "mean_energy": 0.051221366168406134,
+      "relative_energy": 0.051221366168406134,
+      "target_satisfaction_rate": 0.9247311827956989,
+      "normalized_target_satisfaction": 0.9247311827956989,
+      "mock_light_estimation_error": 0.1359421882754787
+    },
+    "projection": {
+      "mean_under_light": 0.025355998460219478,
+      "max_under_light": 0.09953969657745265,
+      "mean_over_light": 0.0,
+      "max_over_light": 0.0,
+      "mean_energy": 0.1421900576051425,
+      "relative_energy": 0.1421900576051425,
+      "target_satisfaction_rate": 0.7204301075268817,
+      "normalized_target_satisfaction": 0.7204301075268817,
+      "mock_light_estimation_error": 0.046190996851720414
+    },
+    "board_writing": {
+      "mean_under_light": 0.026269812004246936,
+      "max_under_light": 0.19286507502485173,
+      "mean_over_light": 0.0024305304106620206,
+      "max_over_light": 0.1437989515822461,
+      "mean_energy": 0.11829108042820206,
+      "relative_energy": 0.11829108042820206,
+      "target_satisfaction_rate": 0.8494623655913979,
+      "normalized_target_satisfaction": 0.8494623655913979,
+      "mock_light_estimation_error": 0.1183709003730432
+    },
+    "self_study": {
+      "mean_under_light": 0.01754979623320778,
+      "max_under_light": 0.31997503342744965,
+      "mean_over_light": 0.0,
+      "max_over_light": 0.0,
+      "mean_energy": 0.06802264550031399,
+      "relative_energy": 0.06802264550031399,
+      "target_satisfaction_rate": 0.9139784946236559,
+      "normalized_target_satisfaction": 0.9139784946236559,
+      "mock_light_estimation_error": 0.12052809720464377
+    }
+  },
+  "static_auxiliary_by_scenario": {
+    "class_writing": {
+      "dynamic_residual_level": 0.015624432643427742,
+      "mean_visibility_weight": 1.0,
+      "mean_base_reflectance": 0.5397849462365591
+    },
+    "break_discussion": {
+      "dynamic_residual_level": 0.015624432643427742,
+      "mean_visibility_weight": 1.0,
+      "mean_base_reflectance": 0.5397849462365591
+    },
+    "projection": {
+      "dynamic_residual_level": 0.015624432643427742,
+      "mean_visibility_weight": 1.0,
+      "mean_base_reflectance": 0.5397849462365591
+    },
+    "board_writing": {
+      "dynamic_residual_level": 0.015624432643427742,
+      "mean_visibility_weight": 1.0,
+      "mean_base_reflectance": 0.5397849462365591
+    },
+    "self_study": {
+      "dynamic_residual_level": 0.015624432643427742,
+      "mean_visibility_weight": 1.0,
+      "mean_base_reflectance": 0.5397849462365591
+    }
+  },
+  "calibration": {
+    "class_writing": {
+      "kind": "mock_indirect_supervision_demo",
+      "label_field": "mock_control_strategy_label",
+      "examples": 1.0,
+      "mean_control_strategy_loss": 0.001043027930614085,
+      "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
+    },
+    "break_discussion": {
+      "kind": "mock_indirect_supervision_demo",
+      "label_field": "mock_control_strategy_label",
+      "examples": 1.0,
+      "mean_control_strategy_loss": 0.0021249544801332544,
+      "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
+    },
+    "projection": {
+      "kind": "mock_indirect_supervision_demo",
+      "label_field": "mock_control_strategy_label",
+      "examples": 1.0,
+      "mean_control_strategy_loss": 0.0013995967176629767,
+      "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
+    },
+    "board_writing": {
+      "kind": "mock_indirect_supervision_demo",
+      "label_field": "mock_control_strategy_label",
+      "examples": 1.0,
+      "mean_control_strategy_loss": 0.0016337869117054593,
+      "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
+    },
+    "self_study": {
+      "kind": "mock_indirect_supervision_demo",
+      "label_field": "mock_control_strategy_label",
+      "examples": 1.0,
+      "mean_control_strategy_loss": 0.001988999702508128,
+      "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
+    }
+  },
+  "method_alignment": {
+    "closed_variable_chain": [
+      "VGGT-like semantic point maps",
+      "work-surface cells C={cell_i}",
+      "3DGS helper outputs: dynamic_residual, visibility_weight, base_reflectance",
+      "F_i(t), O_t(i), A_t(i,k), L_t(i)",
+      "L_day,t(i), R_t(i), M(i,g)",
+      "optimized lamp control vector c_t"
+    ],
+    "mock_modules": [
+      "VGGT geometry reconstruction",
+      "3DGS static scene",
+      "Swin-Tiny-FPN perception heads",
+      "indirect supervision labels",
+      "lamp hardware response"
+    ],
+    "not_claimed": [
+      "real model training",
+      "real multi-camera calibration",
+      "real illuminance-meter validation",
+      "deployable classroom control system"
+    ],
+    "cell_index_note": "Lamps may be localized by semantic masks, but lamps are not work-surface cells and are stored separately from Cell."
+  },
+  "solver_success_note": "solver_success only means the optimizer converged; it does not mean every cell demand is fully satisfied.",
+  "disclaimer": "Runnable mock prototype only; no trained VGGT/3DGS/Swin models or real lamp hardware."
+}

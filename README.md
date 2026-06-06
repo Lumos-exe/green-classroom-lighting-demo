@@ -20,9 +20,11 @@
 - **逐灯控制**：20 个顶灯和 2 条前方线灯独立变化，而不是整间教室统一调光。
 - **节能可解释**：dashboard 同步显示人员活动、工作表面 cell、灯具亮度矩阵和相对能耗节省。
 
-## 系统思路
+仓库现在包含两部分内容：一部分是 Blender 动画演示，用来直观看效果；另一部分是独立的论文方法代码原型，用 mock 数据把论文中的完整计算链路写出来。两者互不依赖，动画不调用论文原型代码，论文原型也不读取动画数据。
 
-项目使用一条简化的数据链路来模拟论文中的控制思想：
+## 动画演示思路
+
+动画部分使用一条简化的数据链路来模拟论文中的控制思想：
 
 ```text
 人员位置与活动
@@ -72,6 +74,30 @@
 
 能耗只做相对估算：用灯具亮度时间序列积分，比较 `full_on` 与 `smart_per_lamp_dimming`。它用于展示节能趋势，不代表真实电表读数或灯具功率测量。
 
+## 论文方法代码原型
+
+[`paper_method/`](paper_method/) 是一套与动画解耦的论文方法原型代码，用来展示“如果真正按论文方法组织系统，代码结构应如何展开”。它不导入 Blender，不读取 `outputs/data`，也不依赖动画里预设的人物路径。
+
+这里的 `mock` 指模拟输入和占位模块：代码用合成数据代替真实 VGGT、Swin-Tiny-FPN、多相机输入和灯具硬件，只用于跑通论文接口与控制链路。若后续具备真实模型或硬件，可替换对应 mock 模块。
+
+这套原型实际实现的是论文方法的数据流闭环：
+
+```text
+VGGT mock 点图与语义掩码
+    -> 三维工作表面 cell
+    -> 3DGS 辅助输出 dynamic_residual, visibility_weight, base_reflectance
+    -> cell 特征 F_i(t)
+    -> Swin-Tiny-FPN 三任务 head mock 输出 O_t(i), A_t(i,k), L_t(i)
+    -> 灯具贡献矩阵 M(i,g)
+    -> 环境光 L_day,t(i) 与目标需求 R_t(i)
+    -> L-BFGS-B / projected-gradient 控制优化
+    -> 灯具控制向量 c_t
+```
+
+运行后，它会生成一组独立结果：工作表面 cell、mock 感知状态、灯具贡献矩阵 `M(i,g)`、目标照明需求 `R_t(i)`、预测亮度、欠照/过照指标、相对能耗指标和灯具控制向量 `c_t`。这些结果位于 [`outputs/paper_method_demo/`](outputs/paper_method_demo/)。
+
+这部分代码的作用，是说明论文方法的数据流和控制逻辑如何在代码层面闭合。它不证明真实视觉模型精度、真实节能效果，也不代表系统已经具备实际部署能力。
+
 ## 输出文件
 
 | 类型 | 文件 | 说明 |
@@ -83,10 +109,13 @@
 | README 预览 GIF | [`dashboard_preview.gif`](outputs/videos/dashboard_preview.gif) | README 顶部轻量预览。 |
 | 补充 GIF | [`activity_heatmap.gif`](outputs/videos/activity_heatmap.gif), [`light_control_matrix.gif`](outputs/videos/light_control_matrix.gif) | 单独展示活动热力图和灯具亮度矩阵。 |
 | 数据 | [`outputs/data/`](outputs/data/) | 时间线、人员、cell、灯光和能耗 CSV。 |
+| 论文方法原型输出 | [`outputs/paper_method_demo/`](outputs/paper_method_demo/) | mock 论文链路生成的 cell、感知、贡献矩阵、目标需求和控制结果。 |
 | 研究图 | [`outputs/figures/`](outputs/figures/) | 时间线、亮度曲线、热力图、能耗对比等静态图。 |
 | Blender 场景 | [`outputs/blender/`](outputs/blender/) | 生成的 `.blend` 文件。 |
 
 ## 数据说明
+
+动画演示数据：
 
 | 文件 | 用途 |
 | --- | --- |
@@ -97,13 +126,26 @@
 | [`activity_cell_timeseries.csv`](outputs/data/activity_cell_timeseries.csv) | 每个 cell 在每个时间点的主导活动和活动分数。 |
 | [`energy_summary.csv`](outputs/data/energy_summary.csv) | 全开基线与智能逐灯调光的相对能耗对比。 |
 
+论文方法原型输出：
+
+| 文件 | 用途 |
+| --- | --- |
+| [`cells.csv`](outputs/paper_method_demo/cells.csv) | mock VGGT/语义表面流程生成的三维工作表面 cell。 |
+| [`perception_state.csv`](outputs/paper_method_demo/perception_state.csv) | 三任务 head 的 mock 输出，包括 `F_i(t)`、`O_t(i)`、`A_t(i,k)`、`L_t(i)` 和 `board_front` 标记。 |
+| [`contribution_matrix.csv`](outputs/paper_method_demo/contribution_matrix.csv) | 灯具贡献矩阵 `M(i,g)`。 |
+| [`target_demand.csv`](outputs/paper_method_demo/target_demand.csv) | 环境光、目标需求、亮度上限、预测亮度、欠照和过照。 |
+| [`control_result.csv`](outputs/paper_method_demo/control_result.csv) | 每个 mock 场景下的灯具控制向量 `c_t`。 |
+| [`run_summary.json`](outputs/paper_method_demo/run_summary.json) | 场景、求解器、控制量、欠照/过照、相对能耗、目标满足率、mock 光照估计误差、3DGS 辅助统计和方法对齐说明。 |
+
 ## 仓库结构
 
 ```text
 blender/                     Blender 教室模型、动画和数据导出脚本
+paper_method/                独立论文方法代码原型
 scripts/                     图表、GIF 和 companion 视频生成脚本
 outputs/videos/              主动画、dashboard、分析视频和 GIF
 outputs/data/                CSV 数据
+outputs/paper_method_demo/   论文方法原型输出
 outputs/figures/             研究图表
 outputs/blender/             Blender 场景文件
 true_classroom_images/       教室参考照片
@@ -111,38 +153,44 @@ true_classroom_images/       教室参考照片
 
 ## 复现方式
 
-所有命令建议在 Docker 容器 `brave_cerf` 内执行，仓库路径为 `/workspaces/green`。
+以下命令均在仓库根目录执行。若使用 Docker、devcontainer 或其他隔离环境，请先进入对应环境中的项目目录。
 
 语法检查：
 
 ```bash
-docker exec brave_cerf bash -lc 'cd /workspaces/green && python3 -m py_compile blender/create_realistic_classroom_preview.py blender/create_smart_lighting_demo.py scripts/create_research_figures.py scripts/create_companion_videos.py'
+python3 -m py_compile blender/create_realistic_classroom_preview.py blender/create_smart_lighting_demo.py scripts/create_research_figures.py scripts/create_companion_videos.py paper_method/*.py scripts/run_paper_method_demo.py
 ```
 
 重新导出关键帧、Blender 场景和 CSV 数据：
 
 ```bash
-docker exec brave_cerf bash -lc 'cd /workspaces/green && blender --background --python blender/create_smart_lighting_demo.py -- --keyframes-only'
+blender --background --python blender/create_smart_lighting_demo.py -- --keyframes-only
 ```
 
 生成研究图和 GIF：
 
 ```bash
-docker exec brave_cerf bash -lc 'cd /workspaces/green && python3 scripts/create_research_figures.py'
+python3 scripts/create_research_figures.py
 ```
 
 生成 companion 视频：
 
 ```bash
-docker exec brave_cerf bash -lc 'cd /workspaces/green && python3 scripts/create_companion_videos.py'
+python3 scripts/create_companion_videos.py
+```
+
+运行独立论文方法代码原型：
+
+```bash
+python3 scripts/run_paper_method_demo.py
 ```
 
 重新渲染完整主动画会耗时较长：
 
 ```bash
-docker exec brave_cerf bash -lc 'cd /workspaces/green && blender --background --python blender/create_smart_lighting_demo.py'
+blender --background --python blender/create_smart_lighting_demo.py
 ```
 
 ## 限制
 
-本项目是课程/论文展示用的动画概念模拟，不是可部署的照明控制系统。它没有接入真实传感器、真实灯具功率曲线、日照数据或照度计校准。人物模型、活动识别、cell 需求和能耗估算都服务于“把方法讲清楚”，不应被理解为实际工程性能结论。
+本项目是课程/论文展示用的动画概念模拟，不是可部署的照明控制系统。它没有接入真实传感器、真实灯具功率曲线、日照数据或照度计校准。人物模型、活动识别、cell 需求和能耗估算都服务于“把方法讲清楚”，不应被理解为实际工程性能结论。论文方法原型中的 `solver_success=true` 只表示优化器收敛，不表示每个 cell 的目标亮度都被完全满足；是否欠照或过照应查看 `target_demand.csv` 和 `run_summary.json` 中的质量指标。
