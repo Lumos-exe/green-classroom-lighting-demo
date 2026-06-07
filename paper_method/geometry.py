@@ -143,7 +143,19 @@ def geometric_contribution_prior(cells: list[Cell], lamps: list[Lamp]) -> np.nda
             incidence = max(0.08, float(cell.normal @ incoming))
             if cell.label in ("board", "screen"):
                 incidence = max(0.15, abs(float(cell.normal @ incoming)))
-            spread = math.exp(-0.018 * distance * distance)
-            m[i, g] = incidence * spread * (0.65 + 0.35 * cell.rho) / (distance**1.25)
+            spread = math.exp(-0.068 * distance * distance)
+            semantic_gain = 1.0
+            if lamp.group == "front_linear":
+                semantic_gain = {
+                    "board": 1.45,
+                    "podium": 1.70,
+                    "teacher_desk": 0.78,
+                    "screen": 0.35,
+                }.get(cell.label, 0.90)
+            elif cell.label == "screen":
+                semantic_gain = 0.72
+            elif cell.label == "aisle":
+                semantic_gain = 1.25
+            m[i, g] = semantic_gain * incidence * spread * (0.62 + 0.38 * cell.rho) / (distance**1.78)
     m /= max(1e-9, float(m.max()))
     return m

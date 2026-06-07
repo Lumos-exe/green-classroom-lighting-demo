@@ -23,12 +23,12 @@ OCC_BY_SEMANTIC = {
 }
 ACTIVITY_GAIN = {
     "empty": 0.00,
-    "listening": 0.10,
-    "writing": 0.34,
-    "projection": 0.14,
-    "blackboard-writing": 0.36,
-    "discussion": 0.22,
-    "walking": 0.24,
+    "listening": 0.24,
+    "writing": 0.68,
+    "projection": 0.12,
+    "blackboard-writing": 0.50,
+    "discussion": 0.28,
+    "walking": 0.30,
 }
 
 
@@ -56,9 +56,9 @@ def target_demand(cells: list[Cell], perception: PerceptionState) -> tuple[np.nd
     high_limit = np.ones(len(cells), dtype=float) * 0.92
     screen_idx = [i for i, cell in enumerate(cells) if cell.label == "screen"]
     if screen_idx:
-        high_limit[screen_idx] = 0.56
         projection_col = ACTIVITIES.index("projection")
         projection_signal = perception.activity[screen_idx, projection_col].max()
+        high_limit[screen_idx] = 0.56 if projection_signal > 0.5 else 0.92
         demand[screen_idx] = np.maximum(demand[screen_idx], 0.48 * projection_signal)
     return np.clip(demand, 0.0, high_limit), high_limit
 

@@ -75,11 +75,16 @@ class SwinTinyFPNPerception:
             x, y, _z = cell.center
             scores = {name: 0.0 for name in ACTIVITIES}
             scores["empty"] = 1.0
-            if scenario == "class_writing" and cell.label == "student_desk" and 3.0 <= y <= 10.5:
-                scores.update(empty=0.05, listening=0.35, writing=0.85)
-            elif scenario == "break_discussion" and cell.label in ("aisle", "podium"):
+            if scenario == "class_writing" and cell.label == "student_desk" and 3.0 <= y <= 13.5:
+                scores.update(empty=0.02, listening=0.60, writing=1.50)
+            elif scenario == "class_writing" and cell.label in ("teacher_desk", "podium"):
+                scores.update(empty=0.04, listening=0.80, writing=0.55)
+            elif scenario == "break_discussion" and cell.label == "aisle":
                 near_center = np.exp(-((x - 4.9) / 1.8) ** 2 - ((y - 7.2) / 4.0) ** 2)
-                scores.update(empty=max(0.05, 1.0 - near_center), walking=0.75 * near_center, discussion=0.55 * near_center)
+                scores.update(empty=max(0.10, 1.0 - 0.95 * near_center), walking=0.65 * near_center, discussion=0.55 * near_center)
+            elif scenario == "break_discussion" and cell.label == "podium":
+                near_front = np.exp(-((x - 4.9) / 2.6) ** 2 - ((y - 1.4) / 1.2) ** 2)
+                scores.update(empty=max(0.18, 1.0 - 0.70 * near_front), walking=0.32 * near_front, discussion=0.30 * near_front)
             elif scenario == "projection" and cell.label == "screen":
                 scores.update(empty=0.02, projection=0.98)
             elif scenario == "projection" and cell.label == "student_desk" and y > 5.0:

@@ -15,6 +15,8 @@ def _objective(
     predicted = state.day_light + contribution @ control
     under = np.maximum(0.0, state.target_demand - predicted)
     over = np.maximum(0.0, predicted - state.high_limit)
+    task_weight = 1.0 + 15.0 * (state.target_demand >= 0.35).astype(float) + 3.0 * state.target_demand
+    over_weight = 1.0 + 12.0 * (state.high_limit < 0.7).astype(float)
     energy = control.mean()
     smooth = np.square(control - previous).mean()
     local_uniformity = 0.0
@@ -22,7 +24,13 @@ def _objective(
         idx = [i for i, cell in enumerate(cells) if cell.label == label and state.target_demand[i] > 0.35]
         if len(idx) > 1:
             local_uniformity += float(np.var(predicted[idx]))
-    return float(0.34 * energy + 4.0 * np.square(under).mean() + 2.0 * np.square(over).mean() + 0.55 * smooth + 0.35 * local_uniformity)
+    return float(
+        0.006 * energy
+        + 520.0 * np.average(np.square(under), weights=task_weight)
+        + 130.0 * np.average(np.square(over), weights=over_weight)
+        + 0.06 * smooth
+        + 0.35 * local_uniformity
+    )
 
 
 def _projected_gradient(

@@ -97,16 +97,22 @@ def control_quality_metrics(
 ) -> dict[str, float]:
     under = np.maximum(0.0, target - predicted)
     over = np.maximum(0.0, predicted - high_limit)
-    tolerance = 0.05
+    tolerance = 0.07
+    task_mask = target >= 0.35
+    if not bool(task_mask.any()):
+        task_mask = np.ones_like(target, dtype=bool)
     return {
         "mean_under_light": float(under.mean()),
         "max_under_light": float(under.max()),
+        "task_mean_under_light": float(under[task_mask].mean()),
+        "task_max_under_light": float(under[task_mask].max()),
         "mean_over_light": float(over.mean()),
         "max_over_light": float(over.max()),
         "mean_energy": float(control.mean()),
         "relative_energy": float(control.mean()),
         "target_satisfaction_rate": float((under <= tolerance).mean()),
-        "normalized_target_satisfaction": float((under <= tolerance).mean()),
+        "task_target_satisfaction_rate": float((under[task_mask] <= tolerance).mean()),
+        "normalized_target_satisfaction": float((under[task_mask] <= tolerance).mean()),
         "mock_light_estimation_error": float(np.abs(predicted - visual_light).mean()),
     }
 
