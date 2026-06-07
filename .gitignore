@@ -37,6 +37,20 @@ temp/
 *.tmp
 *.bak
 
+# External research code, model weights, data and heavy reconstruction outputs
+third_party/
+checkpoints/
+datasets/
+data/raw/
+data/processed/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.ply
+*.bin
+outputs/paper_method_real/
+
 # Logs
 *.log
 

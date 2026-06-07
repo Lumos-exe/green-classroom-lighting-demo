@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
 
 from .calibration import CalibrationExample, mock_calibrate_demand_coefficients
 from .demand import build_lighting_state
+from .external import BackendConfig, ExternalDependencyError, backend_record, missing_real_prerequisites
+from .gaussian_splatting_adapter import GaussianSplattingBackend
 from .geometry import discretize_work_surfaces, mock_lamps, mock_vggt_point_maps
 from .lighting_matrix import calibrate_contribution_matrix
 from .perception import SwinTinyFPNPerception
 from .static_3dgs import StaticGaussianScene
 from .types import ACTIVITIES, CameraFrame, PrototypeData, is_board_front_cell
+from .vggt_adapter import VGGTBackend
 
 
 def _mock_frames(seed: int = 3) -> tuple[list[CameraFrame], dict[str, np.ndarray]]:
@@ -44,9 +48,49 @@ def prepare_mock_data() -> PrototypeData:
     return PrototypeData(cells, lamps, frames, contribution, previous_control, background)
 
 
-def run_mock_pipeline(scenario: str = "self_study") -> dict:
-    data = prepare_mock_data()
-    static_scene = StaticGaussianScene(data.static_background)
+def _frames_from_image_dir(image_dir: Path) -> tuple[list[CameraFrame], dict[str, np.ndarray]]:
+    try:
+        from PIL import Image
+    except Exception as exc:
+        raise ExternalDependencyError("Pillow is required to read real classroom images.") from exc
+
+    frames: list[CameraFrame] = []
+    background: dict[str, np.ndarray] = {}
+    for path in sorted(image_dir.iterdir()):
+        if path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}:
+            continue
+        image = np.asarray(Image.open(path).convert("RGB"), dtype=np.uint8)
+        camera_id = path.stem
+        background[camera_id] = image.copy()
+        frames.append(
+            CameraFrame(
+                camera_id=camera_id,
+                image=image,
+                intrinsics=np.eye(3),
+                extrinsics=np.eye(4),
+                timestamp_s=0.0,
+            )
+        )
+    if not frames:
+        raise ExternalDependencyError(f"No readable images found in {image_dir}.")
+    return frames, background
+
+
+def prepare_real_data(config: BackendConfig) -> tuple[PrototypeData, object]:
+    clouds = VGGTBackend(config).semantic_point_clouds()
+    cells = discretize_work_surfaces(clouds)
+    assert config.image_dir is not None
+    frames, background = _frames_from_image_dir(config.image_dir)
+    camera_ids = tuple(frame.camera_id for frame in frames)
+    cells = [replace(cell, visible_cameras=camera_ids) for cell in cells]
+    lamps = mock_lamps()
+    contribution, _terms = calibrate_contribution_matrix(cells, lamps)
+    previous_control = np.full(len(lamps), 0.18, dtype=float)
+    static_scene = GaussianSplattingBackend(config).scene()
+    return PrototypeData(cells, lamps, frames, contribution, previous_control, background), static_scene
+
+
+def _run_from_data(data: PrototypeData, static_scene, scenario: str, backend_info: dict) -> dict:
     visibility_weight = static_scene.visibility_weight(data.cells, data.frames)
     base_reflectance = static_scene.base_reflectance(data.cells)
     dynamic_residual_level = static_scene.dynamic_residual_level(data.frames)
@@ -85,7 +129,78 @@ def run_mock_pipeline(scenario: str = "self_study") -> dict:
         "control": control,
         "calibration": calibration,
         "scenario": scenario,
+        "backend": backend_info,
     }
+
+
+def _default_config(backend: str = "mock") -> BackendConfig:
+    return BackendConfig(project_root=Path(__file__).resolve().parents[1], backend=backend)  # type: ignore[arg-type]
+
+
+def run_mock_pipeline(
+    scenario: str = "self_study",
+    config: BackendConfig | None = None,
+    fallback_reason: str | None = None,
+) -> dict:
+    config = config or _default_config("mock")
+    data = prepare_mock_data()
+    static_scene = StaticGaussianScene(data.static_background)
+    backend_info = backend_record(
+        backend_used="mock",
+        config=config,
+        fallback_reason=fallback_reason,
+        mock_modules_used=[
+            "VGGT semantic point maps",
+            "3DGS static helper",
+            "Swin-Tiny-FPN perception heads",
+            "lamp switching experiments",
+            "lamp hardware response",
+        ],
+    )
+    return _run_from_data(data, static_scene, scenario, backend_info)
+
+
+def run_real_pipeline(scenario: str = "self_study", config: BackendConfig | None = None) -> dict:
+    config = config or _default_config("real")
+    missing = missing_real_prerequisites(config)
+    if missing:
+        raise ExternalDependencyError("Real backend prerequisites are missing: " + "; ".join(missing))
+    data, static_scene = prepare_real_data(config)
+    backend_info = backend_record(
+        backend_used="real",
+        config=config,
+        real_modules_enabled=[
+            "official VGGT geometry backend",
+            "official 3DGS scene adapter",
+        ],
+        mock_modules_used=[
+            "Swin-Tiny-FPN perception heads",
+            "lamp contribution calibration observations",
+            "lamp hardware response",
+        ],
+    )
+    return _run_from_data(data, static_scene, scenario, backend_info)
+
+
+def run_pipeline(
+    scenario: str = "self_study",
+    backend: str = "mock",
+    config: BackendConfig | None = None,
+) -> dict:
+    config = config or _default_config(backend)
+    if backend == "mock":
+        return run_mock_pipeline(scenario, config=config)
+    if backend == "real":
+        return run_real_pipeline(scenario, config=config)
+    if backend == "auto":
+        missing = missing_real_prerequisites(config)
+        if missing:
+            return run_mock_pipeline(scenario, config=config, fallback_reason="; ".join(missing))
+        try:
+            return run_real_pipeline(scenario, config=config)
+        except ExternalDependencyError as exc:
+            return run_mock_pipeline(scenario, config=config, fallback_reason=str(exc))
+    raise ValueError(f"Unknown backend: {backend}")
 
 
 def control_quality_metrics(
@@ -120,14 +235,18 @@ def control_quality_metrics(
 def method_alignment_summary() -> dict:
     return {
         "closed_variable_chain": [
-            "VGGT-like semantic point maps",
+            "VGGT semantic point maps or mock VGGT-like semantic point maps",
             "work-surface cells C={cell_i}",
             "3DGS helper outputs: dynamic_residual, visibility_weight, base_reflectance",
             "F_i(t), O_t(i), A_t(i,k), L_t(i)",
             "L_day,t(i), R_t(i), M(i,g)",
             "optimized lamp control vector c_t",
         ],
-        "mock_modules": [
+        "real_backend_interfaces": [
+            "facebookresearch/vggt adapter",
+            "graphdeco-inria/gaussian-splatting adapter",
+        ],
+        "default_mock_modules": [
             "VGGT geometry reconstruction",
             "3DGS static scene",
             "Swin-Tiny-FPN perception heads",
@@ -237,8 +356,9 @@ def write_outputs(result: dict, out_dir: Path) -> None:
         "static_auxiliary": result["static_auxiliary"],
         "calibration": result["calibration"],
         "method_alignment": method_alignment_summary(),
+        "backend": result.get("backend", {}),
         "solver_success_note": "solver_success only means the optimizer converged; it does not mean every cell demand is fully satisfied.",
-        "disclaimer": "Runnable mock prototype only; no trained VGGT/3DGS/Swin models or real lamp hardware.",
+        "disclaimer": "Code reproduction framework with real VGGT/3DGS adapters; public demo outputs use mock or fallback modules unless backend_used is real.",
     }
     (out_dir / "run_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -322,7 +442,8 @@ def write_multi_outputs(results: list[dict], out_dir: Path) -> None:
         },
         "calibration": {result["scenario"]: result["calibration"] for result in results},
         "method_alignment": method_alignment_summary(),
+        "backend": first.get("backend", {}),
         "solver_success_note": "solver_success only means the optimizer converged; it does not mean every cell demand is fully satisfied.",
-        "disclaimer": "Runnable mock prototype only; no trained VGGT/3DGS/Swin models or real lamp hardware.",
+        "disclaimer": "Code reproduction framework with real VGGT/3DGS adapters; public demo outputs use mock or fallback modules unless backend_used is real.",
     }
     (out_dir / "run_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")

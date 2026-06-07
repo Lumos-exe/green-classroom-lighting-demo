@@ -20,7 +20,7 @@
 - **逐灯控制**：20 个顶灯和 2 条前方线灯独立变化，而不是整间教室统一调光。
 - **节能可解释**：dashboard 同步显示人员活动、工作表面 cell、灯具亮度矩阵和相对能耗节省。
 
-仓库现在包含两部分内容：一部分是 Blender 动画演示，用来直观看效果；另一部分是独立的论文方法代码原型，用 mock 数据把论文中的完整计算链路写出来。两者互不依赖，动画不调用论文原型代码，论文原型也不读取动画数据。
+仓库现在包含两部分内容：一部分是 Blender 动画演示，用来直观看效果；另一部分是独立的论文方法代码框架，用代码组织论文中的 VGGT、3DGS、cell 感知、需求生成和控制优化链路。两者互不依赖，动画不调用论文方法代码，论文方法代码也不读取动画数据。
 
 ## 动画演示思路
 
@@ -74,18 +74,23 @@
 
 能耗只做相对估算：用灯具亮度时间序列积分，比较 `full_on` 与 `smart_per_lamp_dimming`。它用于展示节能趋势，不代表真实电表读数或灯具功率测量。
 
-## 论文方法代码原型
+## 论文方法代码框架
 
-[`paper_method/`](paper_method/) 是一套与动画解耦的论文方法原型代码，用来展示“如果真正按论文方法组织系统，代码结构应如何展开”。它不导入 Blender，不读取 `outputs/data`，也不依赖动画里预设的人物路径。
+[`paper_method/`](paper_method/) 是一套与动画解耦的论文方法代码框架，用来展示“如果真正按论文方法组织系统，代码结构应如何展开”。它不导入 Blender，不读取 `outputs/data`，也不依赖动画里预设的人物路径。
 
-这里的 `mock` 指模拟输入和占位模块：代码用合成数据代替真实 VGGT、Swin-Tiny-FPN、多相机输入和灯具硬件，只用于跑通论文接口与控制链路；真实模型和硬件接入不属于当前项目范围。
+这部分代码现在包含两类后端：
+
+- **mock 后端**：默认运行方式，使用合成数据和规则化模块，保证没有真实数据、模型权重和硬件时也能跑通论文变量链路。
+- **real 后端接口**：预留官方 VGGT 与 3D Gaussian Splatting 代码的接入路径。第三方源码通过安装脚本下载到 `third_party/`，不提交到本仓库。
+
+需要强调的是，当前公开生成的 `outputs/paper_method_demo/` 仍来自 mock 后端。只有在准备好真实多视角图像、语义掩码、VGGT 权重、3DGS 静态场景和相应 Python/CUDA 环境后，才可以显式使用 `--backend real` 检查可选接口链路；本项目不声称已经完成真实模型训练或真实教室部署复现。
 
 这套原型实际实现的是论文方法的数据流闭环：
 
 ```text
-VGGT mock 点图与语义掩码
+VGGT 点图与语义掩码（real 或 mock）
     -> 三维工作表面 cell
-    -> 3DGS 辅助输出 dynamic_residual, visibility_weight, base_reflectance
+    -> 3DGS 辅助输出 dynamic_residual, visibility_weight, base_reflectance（real 或 mock）
     -> cell 特征 F_i(t)
     -> Swin-Tiny-FPN 三任务 head mock 输出 O_t(i), A_t(i,k), L_t(i)
     -> 灯具贡献矩阵 M(i,g)
@@ -94,9 +99,9 @@ VGGT mock 点图与语义掩码
     -> 灯具控制向量 c_t
 ```
 
-运行后，它会生成一组独立结果：工作表面 cell、mock 感知状态、灯具贡献矩阵 `M(i,g)`、目标照明需求 `R_t(i)`、预测亮度、欠照/过照指标、相对能耗指标和灯具控制向量 `c_t`。这些结果位于 [`outputs/paper_method_demo/`](outputs/paper_method_demo/)。
+运行后，它会生成一组独立结果：工作表面 cell、感知状态、灯具贡献矩阵 `M(i,g)`、目标照明需求 `R_t(i)`、预测亮度、欠照/过照指标、相对能耗指标和灯具控制向量 `c_t`。这些结果位于 [`outputs/paper_method_demo/`](outputs/paper_method_demo/)。
 
-这部分代码的作用，是说明论文方法的数据流和控制逻辑如何在代码层面闭合。它不证明真实视觉模型精度、真实节能效果，也不代表系统已经具备实际部署能力。
+这部分代码的作用，是把论文方法写成可检查的工程接口和控制流程。它不证明真实视觉模型精度、真实节能效果，也不代表系统已经具备实际部署能力；当前运行使用的是 mock 还是可选 real 接口，应以 `run_summary.json` 中的 `backend.backend_used` 为准。
 
 ## 输出文件
 
@@ -109,7 +114,7 @@ VGGT mock 点图与语义掩码
 | README 预览 GIF | [`dashboard_preview.gif`](outputs/videos/dashboard_preview.gif) | README 顶部轻量预览。 |
 | 补充 GIF | [`activity_heatmap.gif`](outputs/videos/activity_heatmap.gif), [`light_control_matrix.gif`](outputs/videos/light_control_matrix.gif) | 单独展示活动热力图和灯具亮度矩阵。 |
 | 数据 | [`outputs/data/`](outputs/data/) | 时间线、人员、cell、灯光和能耗 CSV。 |
-| 论文方法原型输出 | [`outputs/paper_method_demo/`](outputs/paper_method_demo/) | mock 论文链路生成的 cell、感知、贡献矩阵、目标需求和控制结果。 |
+| 论文方法输出 | [`outputs/paper_method_demo/`](outputs/paper_method_demo/) | 论文方法代码框架生成的 cell、感知、贡献矩阵、目标需求和控制结果；当前公开结果默认来自 mock 后端。 |
 | 研究图 | [`outputs/figures/`](outputs/figures/) | 时间线、亮度曲线、热力图、能耗对比等静态图。 |
 | Blender 场景 | [`outputs/blender/`](outputs/blender/) | 生成的 `.blend` 文件。 |
 
@@ -126,26 +131,27 @@ VGGT mock 点图与语义掩码
 | [`activity_cell_timeseries.csv`](outputs/data/activity_cell_timeseries.csv) | 每个 cell 在每个时间点的主导活动和活动分数。 |
 | [`energy_summary.csv`](outputs/data/energy_summary.csv) | 全开基线与智能逐灯调光的相对能耗对比。 |
 
-论文方法原型输出：
+论文方法输出：
 
 | 文件 | 用途 |
 | --- | --- |
-| [`cells.csv`](outputs/paper_method_demo/cells.csv) | mock VGGT/语义表面流程生成的三维工作表面 cell。 |
-| [`perception_state.csv`](outputs/paper_method_demo/perception_state.csv) | 三任务 head 的 mock 输出，包括 `F_i(t)`、`O_t(i)`、`A_t(i,k)`、`L_t(i)` 和 `board_front` 标记。 |
+| [`cells.csv`](outputs/paper_method_demo/cells.csv) | VGGT/语义表面流程生成的三维工作表面 cell；mock 后端使用合成点图。 |
+| [`perception_state.csv`](outputs/paper_method_demo/perception_state.csv) | 三任务 head 输出，包括 `F_i(t)`、`O_t(i)`、`A_t(i,k)`、`L_t(i)` 和 `board_front` 标记；当前感知 head 仍为 mock。 |
 | [`contribution_matrix.csv`](outputs/paper_method_demo/contribution_matrix.csv) | 灯具贡献矩阵 `M(i,g)`。 |
 | [`target_demand.csv`](outputs/paper_method_demo/target_demand.csv) | 环境光、目标需求、亮度上限、预测亮度、欠照和过照。 |
-| [`control_result.csv`](outputs/paper_method_demo/control_result.csv) | 每个 mock 场景下的灯具控制向量 `c_t`。 |
-| [`run_summary.json`](outputs/paper_method_demo/run_summary.json) | 场景、求解器、控制量、欠照/过照、相对能耗、目标满足率、mock 光照估计误差、3DGS 辅助统计和方法对齐说明。 |
+| [`control_result.csv`](outputs/paper_method_demo/control_result.csv) | 每个场景下的灯具控制向量 `c_t`。 |
+| [`run_summary.json`](outputs/paper_method_demo/run_summary.json) | 场景、求解器、控制质量指标、3DGS 辅助统计、backend 使用情况、缺失依赖和方法对齐说明。 |
 
 ## 仓库结构
 
 ```text
 blender/                     Blender 教室模型、动画和数据导出脚本
-paper_method/                独立论文方法代码原型
+paper_method/                独立论文方法代码框架
 scripts/                     图表、GIF 和 companion 视频生成脚本
+third_party/                 外部 VGGT/3DGS 源码下载位置，默认被 git 忽略
 outputs/videos/              主动画、dashboard、分析视频和 GIF
 outputs/data/                CSV 数据
-outputs/paper_method_demo/   论文方法原型输出
+outputs/paper_method_demo/   论文方法输出
 outputs/figures/             研究图表
 outputs/blender/             Blender 场景文件
 true_classroom_images/       教室参考照片
@@ -179,10 +185,31 @@ python3 scripts/create_research_figures.py
 python3 scripts/create_companion_videos.py
 ```
 
-运行独立论文方法代码原型：
+安装可选外部源码：
 
 ```bash
-python3 scripts/run_paper_method_demo.py
+bash scripts/install_paper_method_repos.sh
+```
+
+运行独立论文方法代码框架的默认 mock 后端：
+
+```bash
+python3 scripts/run_paper_method_demo.py --backend mock
+```
+
+检查可选 VGGT/3DGS 接口是否准备好：
+
+```bash
+python3 scripts/run_paper_method_demo.py --backend real \
+  --image-dir path/to/images \
+  --mask-dir path/to/masks \
+  --gaussian-scene-dir path/to/3dgs_scene
+```
+
+也可以使用 `auto`：依赖和输入齐全时尝试可选 real 接口，否则回退到 mock，并在 `run_summary.json` 记录原因。
+
+```bash
+python3 scripts/run_paper_method_demo.py --backend auto
 ```
 
 重新渲染完整主动画会耗时较长：
@@ -193,4 +220,4 @@ blender --background --python blender/create_smart_lighting_demo.py
 
 ## 限制
 
-本项目是课程/论文展示用的动画概念模拟，不是可部署的照明控制系统。它没有接入真实传感器、真实灯具功率曲线、日照数据或照度计校准。人物模型、活动识别、cell 需求和能耗估算都服务于“把方法讲清楚”，不应被理解为实际工程性能结论。论文方法原型中的 `solver_success=true` 只表示优化器收敛，不表示每个 cell 的目标亮度都被完全满足；是否欠照或过照应查看 `target_demand.csv` 和 `run_summary.json` 中的质量指标。
+本项目是课程/论文展示用的动画概念模拟和代码框架，不是可部署的照明控制系统。它没有接入真实传感器、真实灯具功率曲线、日照数据或照度计校准。人物模型、活动识别、cell 需求和能耗估算都服务于“把方法讲清楚”，不应被理解为实际工程性能结论。论文方法代码虽然预留 VGGT 与 3DGS 的可选接口，但默认公开结果仍为 mock 合成验证；`solver_success=true` 只表示优化器收敛，不表示每个 cell 的目标亮度都被完全满足，是否欠照或过照应查看 `target_demand.csv` 和 `run_summary.json` 中的质量指标。

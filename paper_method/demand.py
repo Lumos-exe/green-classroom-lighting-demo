@@ -21,14 +21,61 @@ OCC_BY_SEMANTIC = {
     "aisle": 0.16,
     "podium": 0.18,
 }
-ACTIVITY_GAIN = {
-    "empty": 0.00,
-    "listening": 0.24,
-    "writing": 0.68,
-    "projection": 0.12,
-    "blackboard-writing": 0.50,
-    "discussion": 0.28,
-    "walking": 0.30,
+ACTIVITY_GAIN_BY_SEMANTIC = {
+    "student_desk": {
+        "empty": 0.00,
+        "listening": 0.24,
+        "writing": 0.68,
+        "projection": 0.12,
+        "blackboard-writing": 0.10,
+        "discussion": 0.22,
+        "walking": 0.18,
+    },
+    "teacher_desk": {
+        "empty": 0.00,
+        "listening": 0.28,
+        "writing": 0.56,
+        "projection": 0.08,
+        "blackboard-writing": 0.44,
+        "discussion": 0.24,
+        "walking": 0.22,
+    },
+    "board": {
+        "empty": 0.00,
+        "listening": 0.08,
+        "writing": 0.08,
+        "projection": 0.04,
+        "blackboard-writing": 0.50,
+        "discussion": 0.04,
+        "walking": 0.02,
+    },
+    "screen": {
+        "empty": 0.00,
+        "listening": 0.04,
+        "writing": 0.04,
+        "projection": 0.12,
+        "blackboard-writing": 0.02,
+        "discussion": 0.04,
+        "walking": 0.02,
+    },
+    "aisle": {
+        "empty": 0.00,
+        "listening": 0.06,
+        "writing": 0.18,
+        "projection": 0.04,
+        "blackboard-writing": 0.04,
+        "discussion": 0.28,
+        "walking": 0.30,
+    },
+    "podium": {
+        "empty": 0.00,
+        "listening": 0.30,
+        "writing": 0.56,
+        "projection": 0.06,
+        "blackboard-writing": 0.50,
+        "discussion": 0.28,
+        "walking": 0.30,
+    },
 }
 
 
@@ -40,8 +87,11 @@ def estimate_day_light(visual_light: np.ndarray, contribution: np.ndarray, previ
 def target_demand(cells: list[Cell], perception: PerceptionState) -> tuple[np.ndarray, np.ndarray]:
     """Compute R_t(i) with semantic base, occupancy, activity and board propagation terms."""
 
-    activity_gain = np.array([ACTIVITY_GAIN[name] for name in ACTIVITIES], dtype=float)
-    local_activity = perception.occupancy * (perception.activity @ activity_gain)
+    activity_gain = np.array(
+        [[ACTIVITY_GAIN_BY_SEMANTIC[cell.label][name] for name in ACTIVITIES] for cell in cells],
+        dtype=float,
+    )
+    local_activity = perception.occupancy * np.sum(perception.activity * activity_gain, axis=1)
     base = np.array([BASE_BY_SEMANTIC[cell.label] for cell in cells], dtype=float)
     occ = np.array([OCC_BY_SEMANTIC[cell.label] for cell in cells], dtype=float) * perception.occupancy
     demand = base + occ + local_activity

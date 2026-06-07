@@ -13,40 +13,40 @@
   ],
   "all_solver_success": true,
   "mean_control_by_scenario": {
-    "class_writing": 0.8247427748145895,
-    "break_discussion": 0.7993137184283736,
+    "class_writing": 0.8233055276092043,
+    "break_discussion": 0.7993134081942873,
     "projection": 0.26620701682998116,
-    "board_writing": 0.6746301610870123,
+    "board_writing": 0.6233547704409658,
     "self_study": 0.45363037981542526
   },
   "quality_by_scenario": {
     "class_writing": {
-      "mean_under_light": 0.001832104157034987,
-      "max_under_light": 0.02674383471860342,
-      "task_mean_under_light": 0.0027481562355524806,
-      "task_max_under_light": 0.02674383471860342,
-      "mean_over_light": 0.007642477981806909,
-      "max_over_light": 0.04052198265881246,
-      "mean_energy": 0.8247427748145895,
-      "relative_energy": 0.8247427748145895,
+      "mean_under_light": 0.001732881434649885,
+      "max_under_light": 0.02663303891606561,
+      "task_mean_under_light": 0.0025993221519748275,
+      "task_max_under_light": 0.02663303891606561,
+      "mean_over_light": 0.007390149302151779,
+      "max_over_light": 0.0399414013860816,
+      "mean_energy": 0.8233055276092043,
+      "relative_energy": 0.8233055276092043,
       "target_satisfaction_rate": 1.0,
       "task_target_satisfaction_rate": 1.0,
       "normalized_target_satisfaction": 1.0,
-      "mock_light_estimation_error": 0.3408298632068543
+      "mock_light_estimation_error": 0.33892886654793497
     },
     "break_discussion": {
-      "mean_under_light": 0.0009025983075593448,
-      "max_under_light": 0.06301510346556893,
-      "task_mean_under_light": 0.013990273767169844,
-      "task_max_under_light": 0.06301510346556893,
-      "mean_over_light": 0.0012441570246803195,
-      "max_over_light": 0.026066101421007848,
-      "mean_energy": 0.7993137184283736,
-      "relative_energy": 0.7993137184283736,
+      "mean_under_light": 0.0009025982801712088,
+      "max_under_light": 0.06301509592082466,
+      "task_mean_under_light": 0.013990273342653736,
+      "task_max_under_light": 0.06301509592082466,
+      "mean_over_light": 0.0012441576563901593,
+      "max_over_light": 0.026065870279052827,
+      "mean_energy": 0.7993134081942873,
+      "relative_energy": 0.7993134081942873,
       "target_satisfaction_rate": 1.0,
       "task_target_satisfaction_rate": 1.0,
       "normalized_target_satisfaction": 1.0,
-      "mock_light_estimation_error": 0.3390049353582954
+      "mock_light_estimation_error": 0.33900481674755084
     },
     "projection": {
       "mean_under_light": 1.1975256262186292e-05,
@@ -63,18 +63,18 @@
       "mock_light_estimation_error": 0.04107239065896313
     },
     "board_writing": {
-      "mean_under_light": 0.000836563708600438,
-      "max_under_light": 0.04797725270274755,
-      "task_mean_under_light": 0.0043222458277689295,
-      "task_max_under_light": 0.04797725270274755,
-      "mean_over_light": 0.00520769161493806,
-      "max_over_light": 0.1742343349755634,
-      "mean_energy": 0.6746301610870123,
-      "relative_energy": 0.6746301610870123,
+      "mean_under_light": 0.0007538017644043769,
+      "max_under_light": 0.0437220670303724,
+      "task_mean_under_light": 0.003894642449422614,
+      "task_max_under_light": 0.0437220670303724,
+      "mean_over_light": 0.00491956355460538,
+      "max_over_light": 0.17598419158390122,
+      "mean_energy": 0.6233547704409658,
+      "relative_energy": 0.6233547704409658,
       "target_satisfaction_rate": 1.0,
       "task_target_satisfaction_rate": 1.0,
       "normalized_target_satisfaction": 1.0,
-      "mock_light_estimation_error": 0.2813602695314891
+      "mock_light_estimation_error": 0.2543987071261159
     },
     "self_study": {
       "mean_under_light": 8.693112295067987e-06,
@@ -123,14 +123,20 @@
       "kind": "mock_indirect_supervision_demo",
       "label_field": "mock_control_strategy_label",
       "examples": 1.0,
-      "mean_control_strategy_loss": 0.0008657898340876479,
+      "mean_control_strategy_loss": 0.0008612926236689357,
+      "mean_control_error": 0.0007797721060158513,
+      "mean_light_error": 0.00020380129413271085,
+      "mean_theta_regularization": 0.0,
       "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
     },
     "break_discussion": {
       "kind": "mock_indirect_supervision_demo",
       "label_field": "mock_control_strategy_label",
       "examples": 1.0,
-      "mean_control_strategy_loss": 0.0012338896881018606,
+      "mean_control_strategy_loss": 0.0012338904593055071,
+      "mean_control_error": 0.0011421933031510142,
+      "mean_light_error": 0.00022924289038623243,
+      "mean_theta_regularization": 0.0,
       "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
     },
     "projection": {
@@ -138,13 +144,19 @@
       "label_field": "mock_control_strategy_label",
       "examples": 1.0,
       "mean_control_strategy_loss": 0.0004547384168401484,
+      "mean_control_error": 0.000379535312510278,
+      "mean_light_error": 0.000188007760824676,
+      "mean_theta_regularization": 0.0,
       "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
     },
     "board_writing": {
       "kind": "mock_indirect_supervision_demo",
       "label_field": "mock_control_strategy_label",
       "examples": 1.0,
-      "mean_control_strategy_loss": 0.0008150605430417644,
+      "mean_control_strategy_loss": 0.0012120855890574698,
+      "mean_control_error": 0.001167177692862673,
+      "mean_light_error": 0.00011226974048699181,
+      "mean_theta_regularization": 0.0,
       "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
     },
     "self_study": {
@@ -152,19 +164,26 @@
       "label_field": "mock_control_strategy_label",
       "examples": 1.0,
       "mean_control_strategy_loss": 0.0006809344643090562,
+      "mean_control_error": 0.000632198443685412,
+      "mean_light_error": 0.0001218400515591104,
+      "mean_theta_regularization": 0.0,
       "note": "mock report only; labels are synthetic control-strategy examples, not real human annotations or trained coefficients"
     }
   },
   "method_alignment": {
     "closed_variable_chain": [
-      "VGGT-like semantic point maps",
+      "VGGT semantic point maps or mock VGGT-like semantic point maps",
       "work-surface cells C={cell_i}",
       "3DGS helper outputs: dynamic_residual, visibility_weight, base_reflectance",
       "F_i(t), O_t(i), A_t(i,k), L_t(i)",
       "L_day,t(i), R_t(i), M(i,g)",
       "optimized lamp control vector c_t"
     ],
-    "mock_modules": [
+    "real_backend_interfaces": [
+      "facebookresearch/vggt adapter",
+      "graphdeco-inria/gaussian-splatting adapter"
+    ],
+    "default_mock_modules": [
       "VGGT geometry reconstruction",
       "3DGS static scene",
       "Swin-Tiny-FPN perception heads",
@@ -179,6 +198,31 @@
     ],
     "cell_index_note": "Lamps may be localized by semantic masks, but lamps are not work-surface cells and are stored separately from Cell."
   },
+  "backend": {
+    "backend_used": "mock",
+    "requested_backend": "mock",
+    "external_repos": {
+      "vggt": "/workspaces/green/third_party/vggt",
+      "gaussian_splatting": "/workspaces/green/third_party/gaussian-splatting"
+    },
+    "real_modules_enabled": [],
+    "mock_modules_used": [
+      "VGGT semantic point maps",
+      "3DGS static helper",
+      "Swin-Tiny-FPN perception heads",
+      "lamp switching experiments",
+      "lamp hardware response"
+    ],
+    "missing_prerequisites": [
+      "VGGT official code not found at /workspaces/green/third_party/vggt",
+      "3DGS official code not found at /workspaces/green/third_party/gaussian-splatting",
+      "multi-view image directory is required (--image-dir)",
+      "semantic mask directory is required (--mask-dir)",
+      "trained/static 3DGS scene directory is required (--gaussian-scene-dir)"
+    ],
+    "fallback_reason": null,
+    "notes": []
+  },
   "solver_success_note": "solver_success only means the optimizer converged; it does not mean every cell demand is fully satisfied.",
-  "disclaimer": "Runnable mock prototype only; no trained VGGT/3DGS/Swin models or real lamp hardware."
+  "disclaimer": "Code reproduction framework with real VGGT/3DGS adapters; public demo outputs use mock or fallback modules unless backend_used is real."
 }
